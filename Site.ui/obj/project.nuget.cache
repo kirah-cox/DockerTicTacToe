@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "7hCx89A1Vjc=",
+  "success": true,
+  "projectFilePath": "/src/Site.ui.csproj",
+  "expectedPackageFiles": [
+    "/root/.nuget/packages/dapper/2.1.89/dapper.2.1.89.nupkg.sha512",
+    "/root/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.12/microsoft.aspnetcore.app.internal.assets.10.0.12.nupkg.sha512",
+    "/root/.nuget/packages/npgsql/10.0.3/npgsql.10.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

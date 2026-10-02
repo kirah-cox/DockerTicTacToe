@@ -1,0 +1,36 @@
+﻿@page "/"
+@inject IConfiguration Configuration
+@using Npgsql
+@using Dapper
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, class!</h1>
+
+Welcome to your new app.
+
+@code{
+    private string message = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create table if not exists
+        await using var conn = new NpgsqlConnection(
+            Configuration.GetConnectionString("DefaultConnection"));
+        await conn.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS testtable (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL
+            )");
+
+        // Insert into table
+        await conn.ExecuteAsync(@"
+            INSERT INTO testtable (name) VALUES (@Name)",
+            new { Name = DateTime.Now.ToString() });
+
+        // Query the table, get last row
+        var result = await conn.QueryAsync("SELECT * from testtable ORDER BY id DESC LIMIT 1");
+        message = result.FirstOrDefault()?.name;
+
+    }
+}

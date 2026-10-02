@@ -1,0 +1,36 @@
+@page "/tictac/{id:int}"
+@inject IConfiguration Configuration
+@using Npgsql
+@using Dapper
+@rendermode InteractiveServer
+ 
+Move:
+<input type='text' @bind="message" />
+
+@message
+ 
+ 
+@code {
+    [Parameter]
+    public int id {get; set;}
+ 
+    private string message ="";
+
+    private string move ="";
+    
+ 
+    protected override  async void OnInitialized()
+    {
+        message = $"Game: {id}";
+        await using var conn = new NpgsqlConnection(
+            Configuration.GetConnectionString("DefaultConnection"));
+        var result = await conn.QueryAsync("SELECT * from tictactoe WHERE id = @Id", new { Id = id});
+        var moves = result.ToList();
+ 
+        if (moves.Count == 0)
+        {
+            message += " - Game Not Started";
+        }
+       
+    }
+}
