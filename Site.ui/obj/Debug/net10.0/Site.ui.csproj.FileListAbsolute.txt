@@ -261,3 +261,4 @@ C:/Users/kirah.cox/Code/backend/docker/project/Site.ui/obj/Debug/net10.0/refint/
 C:/Users/kirah.cox/Code/backend/docker/project/Site.ui/obj/Debug/net10.0/Site.ui.pdb
 C:/Users/kirah.cox/Code/backend/docker/project/Site.ui/obj/Debug/net10.0/Site.ui.genruntimeconfig.cache
 C:/Users/kirah.cox/Code/backend/docker/project/Site.ui/obj/Debug/net10.0/ref/Site.ui.dll
+C:/Users/kirah.cox/Code/backend/docker/project/Site.ui/obj/Debug/net10.0/Site.ui.sourcelink.json

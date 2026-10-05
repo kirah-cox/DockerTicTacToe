@@ -3,34 +3,101 @@
 @using Npgsql
 @using Dapper
 @rendermode InteractiveServer
- 
-Move:
-<input type='text' @bind="message" />
 
 @message
- 
- 
+
+Column Move:
+<input label="Column Move" type='text' @bind="moveColumn" />
+
+Row Move:
+<input label="Row Move" type='text' @bind="moveRow" />
+
+@if (string.IsNullOrEmpty(moveColumn) || string.IsNullOrEmpty(moveRow))
+{
+    <p>Please enter both row and column to make a move.</p>
+}
+else
+{
+    <button @onclick="MakeMove">Make Move</button>
+}
+
+Taken Moves:
+<ul>
+    @foreach (var move in moves)
+    {
+        <li>@move.horizontal, @move.vertical: @move.piece</li>
+    }
+</ul>
+
 @code {
     [Parameter]
     public int id {get; set;}
- 
-    private string message ="";
+    private string message = "";
 
-    private string move ="";
-    
- 
-    protected override  async void OnInitialized()
+    private string moveColumn ="";
+    private string moveRow ="";
+
+    private string characterTurn = "X";
+
+    private int maxRow = 3;
+    private int maxColumn = 3;
+
+    private IEnumerable<dynamic> moves = Enumerable.Empty<dynamic>();
+
+    protected override async Task OnInitializedAsync()
     {
         message = $"Game: {id}";
         await using var conn = new NpgsqlConnection(
             Configuration.GetConnectionString("DefaultConnection"));
-        var result = await conn.QueryAsync("SELECT * from tictactoe WHERE id = @Id", new { Id = id});
-        var moves = result.ToList();
- 
-        if (moves.Count == 0)
+
+        var result = await conn.QueryAsync(
+            "SELECT * FROM tictactoe WHERE game_id = @GameId",
+            new { GameId = id });
+
+        moves = result.ToList();
+
+        if (!moves.Any())
         {
             message += " - Game Not Started";
         }
-       
+    }
+
+    private async Task MakeMove()
+    {
+        if (!int.TryParse(moveRow, out var rowValue) || !int.TryParse(moveColumn, out var columnValue))
+        {
+            message = "Invalid Move: Row and column must be numeric.";
+            return;
+        }
+
+        await using var conn = new NpgsqlConnection(
+            Configuration.GetConnectionString("DefaultConnection"));
+
+        if (moves.Any(m => m.horizontal == rowValue && m.vertical == columnValue))
+        {
+            message = "Invalid Move: Cell already occupied";
+            return;
+        }
+
+        if (moves.Any(m => (m.horizontal > maxRow || m.horizontal <= 0) || (m.vertical > maxColumn || m.vertical <= 0)))
+        {
+            message = "Invalid Move: Cell is out of bounds";
+            return;
+        }
+
+        await conn.ExecuteAsync(@"
+            INSERT INTO tictactoe (game_id, horizontal, vertical, piece) VALUES (@GameId, @Row, @Column, @Character)",
+            new { GameId = id, Row = rowValue, Column = columnValue, Character = characterTurn });
+
+        characterTurn = characterTurn == "X" ? "O" : "X";
+
+        moveColumn = "";
+        moveRow = "";
+
+        var result = await conn.QueryAsync(
+            "SELECT * FROM tictactoe WHERE game_id = @GameId",
+            new { GameId = id });
+
+        moves = result.ToList();
     }
 }
