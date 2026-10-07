@@ -64,6 +64,8 @@ Taken Moves:
 
     private async Task MakeMove()
     {
+        message = "";
+        
         if (!int.TryParse(moveRow, out var rowValue) || !int.TryParse(moveColumn, out var columnValue))
         {
             message = "Invalid Move: Row and column must be numeric.";
@@ -79,9 +81,15 @@ Taken Moves:
             return;
         }
 
-        if (moves.Any(m => (m.horizontal > maxRow || m.horizontal <= 0) || (m.vertical > maxColumn || m.vertical <= 0)))
+        if (rowValue <= 0 || rowValue > maxRow || columnValue <= 0 || columnValue > maxColumn)
         {
             message = "Invalid Move: Cell is out of bounds";
+            return;
+        }
+
+        if (moves.Count() >= maxRow * maxColumn)
+        {
+            message = "Game Over: Board is full";
             return;
         }
 
@@ -99,5 +107,15 @@ Taken Moves:
             new { GameId = id });
 
         moves = result.ToList();
+
+        if (moves.Any(m => m.piece == characterTurn && 
+            ((moves.Count(mv => mv.horizontal == m.horizontal && mv.piece == characterTurn) == maxRow) ||
+             (moves.Count(mv => mv.vertical == m.vertical && mv.piece == characterTurn) == maxColumn) ||
+             (moves.Count(mv => mv.horizontal - mv.vertical == m.horizontal - m.vertical && mv.piece == characterTurn) == maxRow) ||
+             (moves.Count(mv => mv.horizontal + mv.vertical == m.horizontal + m.vertical && mv.piece == characterTurn) == maxRow))))
+        {
+            message = $"Game Over: Player {characterTurn} wins!";
+        }
     }
+
 }
