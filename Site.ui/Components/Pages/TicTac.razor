@@ -6,20 +6,27 @@
 
 @message
 
-Column Move:
-<input label="Column Move" type='text' @bind="moveColumn" />
+<div style="display:grid; grid-template-columns: repeat(3, 60px); gap: 8px; margin: 1rem 0;">
+    @for (var row = 1; row <= maxRow; row++)
+    {
+        @for (var column = 1; column <= maxColumn; column++)
+        {
+            var cellRow = row;
+            var cellColumn = column;
+            var cellValue = GetCellValue(cellRow, cellColumn);
+            var isOccupied = !string.IsNullOrEmpty(cellValue);
 
-Row Move:
-<input label="Row Move" type='text' @bind="moveRow" />
+            <button type="button"
+                    @onclick="() => MakeMove(cellRow, cellColumn)"
+                    disabled="@isOccupied"
+                    style="width:60px; height:60px; font-size:2rem; font-weight:bold; border:1px solid #444; border-radius:8px; background:white; cursor:@(isOccupied ? "default" : "pointer");">
+                @cellValue
+            </button>
+        }
+    }
+</div>
 
-@if (string.IsNullOrEmpty(moveColumn) || string.IsNullOrEmpty(moveRow))
-{
-    <p>Please enter both row and column to make a move.</p>
-}
-else
-{
-    <button @onclick="MakeMove">Make Move</button>
-}
+<p>Current turn: <strong>@characterTurn</strong></p>
 
 Taken Moves:
 <ul>
@@ -33,9 +40,6 @@ Taken Moves:
     [Parameter]
     public int id {get; set;}
     private string message = "";
-
-    private string moveColumn ="";
-    private string moveRow ="";
 
     private string characterTurn = "X";
 
@@ -62,15 +66,15 @@ Taken Moves:
         }
     }
 
-    private async Task MakeMove()
+    private string GetCellValue(int row, int column)
+    {
+        var move = moves.FirstOrDefault(m => m.horizontal == row && m.vertical == column);
+        return move is null ? string.Empty : move.piece?.ToString() ?? string.Empty;
+    }
+
+    private async Task MakeMove(int rowValue, int columnValue)
     {
         message = "";
-        
-        if (!int.TryParse(moveRow, out var rowValue) || !int.TryParse(moveColumn, out var columnValue))
-        {
-            message = "Invalid Move: Row and column must be numeric.";
-            return;
-        }
 
         await using var conn = new NpgsqlConnection(
             Configuration.GetConnectionString("DefaultConnection"));
@@ -93,14 +97,11 @@ Taken Moves:
             return;
         }
 
+        var currentPlayer = characterTurn;
+
         await conn.ExecuteAsync(@"
             INSERT INTO tictactoe (game_id, horizontal, vertical, piece) VALUES (@GameId, @Row, @Column, @Character)",
-            new { GameId = id, Row = rowValue, Column = columnValue, Character = characterTurn });
-
-        characterTurn = characterTurn == "X" ? "O" : "X";
-
-        moveColumn = "";
-        moveRow = "";
+            new { GameId = id, Row = rowValue, Column = columnValue, Character = currentPlayer });
 
         var result = await conn.QueryAsync(
             "SELECT * FROM tictactoe WHERE game_id = @GameId",
@@ -108,14 +109,46 @@ Taken Moves:
 
         moves = result.ToList();
 
-        if (moves.Any(m => m.piece == characterTurn && 
-            ((moves.Count(mv => mv.horizontal == m.horizontal && mv.piece == characterTurn) == maxRow) ||
-             (moves.Count(mv => mv.vertical == m.vertical && mv.piece == characterTurn) == maxColumn) ||
-             (moves.Count(mv => mv.horizontal - mv.vertical == m.horizontal - m.vertical && mv.piece == characterTurn) == maxRow) ||
-             (moves.Count(mv => mv.horizontal + mv.vertical == m.horizontal + m.vertical && mv.piece == characterTurn) == maxRow))))
+        if (HasPlayerWon(currentPlayer))
         {
-            message = $"Game Over: Player {characterTurn} wins!";
+            message = $"Game Over: Player {currentPlayer} wins!";
+            return;
         }
+
+        characterTurn = currentPlayer == "X" ? "O" : "X";
+    }
+
+    private bool HasPlayerWon(string player)
+    {
+        for (var row = 1; row <= maxRow; row++)
+        {
+            if (moves.Count(m => m.piece == player && m.horizontal == row) == maxRow)
+            {
+                return true;
+            }
+        }
+
+        for (var column = 1; column <= maxColumn; column++)
+        {
+            if (moves.Count(m => m.piece == player && m.vertical == column) == maxColumn)
+            {
+                return true;
+            }
+        }
+
+        if (Enumerable.Range(1, maxRow).Count(row =>
+                moves.Any(m => m.piece == player && m.horizontal == row && m.vertical == row)) == maxRow)
+        {
+            return true;
+        }
+
+        if (Enumerable.Range(1, maxRow).Count(row =>
+                moves.Any(m => m.piece == player && m.horizontal == row && m.vertical == (maxColumn - row + 1))) == maxRow)
+        {
+            return true;
+        }
+
+        return false;
     }
 
 }
